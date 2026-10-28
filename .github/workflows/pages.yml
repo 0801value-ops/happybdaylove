@@ -1,4 +1,4 @@
-name: Deploy happybdaylove
+name: Publish happybdaylove
 on:
   push:
     branches: [main]
@@ -9,30 +9,88 @@ permissions:
   id-token: write
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   deploy:
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack the website
-        run: unzip -q nirvana-final-fotos-actualizadas.zip -d site
-      - name: Adapt paths for GitHub Pages
+      - name: Prepare the complete birthday website
+        shell: bash
         run: |
-          find site -type f -name '*.html' -print0 | xargs -0 sed -i 's#="/#="/happybdaylove/#g'
-          find site/__local/intro -type f -name '*.js' -print0 | xargs -0 sed -i 's#"/#"/happybdaylove/#g'
-          find site/assets -type f -name '*.js' -print0 | xargs -0 sed -i -e 's#src:"/#src:"/happybdaylove/#g' -e 's#href:"/#href:"/happybdaylove/#g'
-          sed -i 's#a.jsx(X5,{children:#a.jsx(X5,{basename:"/happybdaylove",children:#' site/assets/index-Bf1YA9eZ.js
-          find site -type f -name '*.css' -print0 | xargs -0 sed -i 's#url("/#url("/happybdaylove/#g'
-          find site -type f -name '*.html' -print0 | xargs -0 sed -i 's#?"/inicio"#?"/happybdaylove/inicio"#g'
-          printf '%s' '(()=>{const b="/happybdaylove",h=history;for(const m of["pushState","replaceState"]){const f=h[m];h[m]=function(s,t,u){if(typeof u==="string"){if(u.startsWith("/")&&!u.startsWith(b+"/"))u=b+u}return f.call(h,s,t,u)}}})()' > site/__local/intro/history-base.js
-          find site -type f -name '*.html' -print0 | xargs -0 sed -i -e 's#index-Bf1YA9eZ.js"#index-Bf1YA9eZ.js?v=8"#g' -e 's#index-Dn-IuYSb.css"#index-Dn-IuYSb.css?v=8"#g' -e 's#</head>#<script src="/happybdaylove/__local/intro/history-base.js"></script></head>#g'
+          unzip -q nirvana-final-fotos-actualizadas.zip -d site
+          node --input-type=module - site /happybdaylove <<'NIRVANA_PAGES'
+          import { promises as fs } from 'node:fs'
+          import path from 'node:path'
+          
+          // Adapt a fresh static ZIP export, never the archival source or local preview.
+          const directory=path.resolve(process.argv[2]||'site')
+          const base=process.argv[3]||'/happybdaylove'
+          if(!/^\/[a-zA-Z0-9._-]+$/.test(base))throw Error('Invalid repository base path')
+          await fs.access(path.join(directory,'index.html'))
+          const bootstrap=`(()=>{
+          const base=${JSON.stringify(base)};
+          window.__nirvanaRoutePath=()=>{const p=location.pathname;return p===base||p===base+'/'?'/':p.startsWith(base+'/')?p.slice(base.length):p};
+          window.__nirvanaPagesUrl=value=>typeof value==='string'&&value.startsWith('/')&&!value.startsWith('//')&&value!==base&&!value.startsWith(base+'/')?base+value:value;
+          for(const name of ['pushState','replaceState']){const original=history[name];history[name]=function(state,title,url){return original.call(this,state,title,window.__nirvanaPagesUrl(url))}};
+          })();`
+          
+          const resourcePrefixes='(?:__local|assets|food-items|shape-nodes|icons|movie-posters|art/gallery)'
+          // Quoted URL strings also cover template literals and CSS url("/...").
+          const assetPattern=new RegExp('(["\x27\x60])/(?='+resourcePrefixes+'/)', 'g')
+          const unquotedCssPattern=new RegExp('url\\(/(?='+resourcePrefixes+'/)', 'g')
+          const matchesOnce=(text,before,after)=>{
+            if(text.split(before).length!==2)throw Error('Unexpected main bundle anchor: '+before)
+            return text.replace(before,after)
+          }
+          async function visit(folder){
+            for(const entry of await fs.readdir(folder,{withFileTypes:true})){
+              const filename=path.join(folder,entry.name)
+              if(entry.isDirectory()){await visit(filename);continue}
+              if(!/\.(?:html|js|mjs|css|svg|json)$/.test(entry.name))continue
+              let text=await fs.readFile(filename,'utf8')
+              if(text.includes('window.__nirvanaPagesUrl=value'))throw Error('Use a fresh ZIP export, not already adapted output')
+              text=text.replace(assetPattern,(_,quote)=>quote+base+'/')
+                .replace(unquotedCssPattern,'url('+base+'/')
+              // Real anchor links need the prefix; React Router's `to` and `path` must
+              // remain relative to its basename so active states and route matches work.
+              text=text.replace(/href:(["'])\/(?!\/)/g,(_,quote)=>'href:'+quote+base+'/')
+                .replace(/\bhref=(["'])\/(?!\/)/g,(_,quote)=>'href='+quote+base+'/')
+                .replace(/\bsrc=(["'])\/(?!\/)/g,(_,quote)=>'src='+quote+base+'/')
+                .replace(/location\.replace\((["'])\/(?!\/)/g,(_,quote)=>'location.replace('+quote+base+'/')
+              // Asset prefixes may already have been adapted above.
+              text=text.replaceAll(base+base+'/',base+'/')
+              if(entry.name==='index-Bf1YA9eZ.js'){
+                text=matchesOnce(text,'VM=()=>a.jsx(X5,{children:','VM=()=>a.jsx(X5,{basename:'+JSON.stringify(base)+',children:')
+                text=matchesOnce(text,'Ak=function(e){return"/"+e}','Ak=function(e){return'+JSON.stringify(base+'/')+'+e}')
+                text=matchesOnce(text,'function nirvanaIsHome(){return /^\\/(?:inicio|home)(?:\\/|$)/.test(window.location.pathname)}','function nirvanaIsHome(){return /^\\/(?:inicio|home)(?:\\/|$)/.test(window.__nirvanaRoutePath())}')
+              }
+              if(entry.name.endsWith('.html')){
+                // Only these small authored inline scripts need a route without basename.
+                // Router internals continue reading the browser's real pathname.
+                text=text.replaceAll('location.pathname','window.__nirvanaRoutePath()')
+                text=text.replace('<head>','<head><script>'+bootstrap+'</script>')
+                if(!text.includes('<head>'))text='<script>'+bootstrap+'</script>'+text
+              }
+              // Rename every reference, including shared imports, so React is loaded once.
+              text=text.replaceAll('index-Bf1YA9eZ.js','index-nirvana-pages-20261028.js')
+                .replaceAll('index-Dn-IuYSb.css','index-nirvana-pages-20261028.css')
+              await fs.writeFile(filename,text)
+            }
+          }
+          await visit(directory)
+          await fs.rename(path.join(directory,'assets/index-Bf1YA9eZ.js'),path.join(directory,'assets/index-nirvana-pages-20261028.js'))
+          await fs.rename(path.join(directory,'assets/index-Dn-IuYSb.css'),path.join(directory,'assets/index-nirvana-pages-20261028.css'))
+          await fs.writeFile(path.join(directory,'.nojekyll'),'')
+          console.log('Prepared GitHub Pages at '+base+' from '+directory)
+          NIRVANA_PAGES
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./site
-      - id: deployment
+          path: site
+      - name: Publish GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
