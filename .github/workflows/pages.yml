@@ -27,6 +27,7 @@ jobs:
           find site/assets -type f -name '*.js' -print0 | xargs -0 sed -i -e 's#src:"/#src:"/happybdaylove/#g' -e 's#href:"/#href:"/happybdaylove/#g'
           sed -i 's#a.jsx(X5,{children:#a.jsx(X5,{basename:"/happybdaylove",children:#' site/assets/index-Bf1YA9eZ.js
           find site -type f -name '*.css' -print0 | xargs -0 sed -i 's#url("/#url("/happybdaylove/#g'
+          find site -type f -name '*.html' -print0 | xargs -0 sed -i -e 's#index-Bf1YA9eZ.js"#index-Bf1YA9eZ.js?v=6"#g' -e 's#index-Dn-IuYSb.css"#index-Dn-IuYSb.css?v=6"#g'
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
