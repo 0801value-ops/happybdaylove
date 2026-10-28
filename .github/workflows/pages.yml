@@ -76,14 +76,14 @@ jobs:
                 if(!text.includes('<head>'))text='<script>'+bootstrap+'</script>'+text
               }
               // Rename every reference, including shared imports, so React is loaded once.
-              text=text.replaceAll('index-Bf1YA9eZ.js','index-nirvana-mobile-20261028.js')
-                .replaceAll('index-Dn-IuYSb.css','index-nirvana-mobile-20261028.css')
+              text=text.replaceAll('index-Bf1YA9eZ.js','index-nirvana-landscape-20261028.js')
+                .replaceAll('index-Dn-IuYSb.css','index-nirvana-landscape-20261028.css')
               await fs.writeFile(filename,text)
             }
           }
           await visit(directory)
-          await fs.rename(path.join(directory,'assets/index-Bf1YA9eZ.js'),path.join(directory,'assets/index-nirvana-mobile-20261028.js'))
-          await fs.rename(path.join(directory,'assets/index-Dn-IuYSb.css'),path.join(directory,'assets/index-nirvana-mobile-20261028.css'))
+          await fs.rename(path.join(directory,'assets/index-Bf1YA9eZ.js'),path.join(directory,'assets/index-nirvana-landscape-20261028.js'))
+          await fs.rename(path.join(directory,'assets/index-Dn-IuYSb.css'),path.join(directory,'assets/index-nirvana-landscape-20261028.css'))
           await fs.writeFile(path.join(directory,'.nojekyll'),'')
           console.log('Prepared GitHub Pages at '+base+' from '+directory)
           NIRVANA_PAGES
