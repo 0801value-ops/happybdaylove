@@ -27,8 +27,9 @@ jobs:
           find site/assets -type f -name '*.js' -print0 | xargs -0 sed -i -e 's#src:"/#src:"/happybdaylove/#g' -e 's#href:"/#href:"/happybdaylove/#g'
           sed -i 's#a.jsx(X5,{children:#a.jsx(X5,{basename:"/happybdaylove",children:#' site/assets/index-Bf1YA9eZ.js
           find site -type f -name '*.css' -print0 | xargs -0 sed -i 's#url("/#url("/happybdaylove/#g'
+          find site -type f -name '*.html' -print0 | xargs -0 sed -i 's#?"/inicio"#?"/happybdaylove/inicio"#g'
           printf '%s' '(()=>{const b="/happybdaylove",h=history;for(const m of["pushState","replaceState"]){const f=h[m];h[m]=function(s,t,u){if(typeof u==="string"){if(u.startsWith("/")&&!u.startsWith(b+"/"))u=b+u}return f.call(h,s,t,u)}}})()' > site/__local/intro/history-base.js
-          find site -type f -name '*.html' -print0 | xargs -0 sed -i -e 's#index-Bf1YA9eZ.js"#index-Bf1YA9eZ.js?v=7"#g' -e 's#index-Dn-IuYSb.css"#index-Dn-IuYSb.css?v=7"#g' -e 's#</head>#<script src="/happybdaylove/__local/intro/history-base.js"></script></head>#g'
+          find site -type f -name '*.html' -print0 | xargs -0 sed -i -e 's#index-Bf1YA9eZ.js"#index-Bf1YA9eZ.js?v=8"#g' -e 's#index-Dn-IuYSb.css"#index-Dn-IuYSb.css?v=8"#g' -e 's#</head>#<script src="/happybdaylove/__local/intro/history-base.js"></script></head>#g'
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
