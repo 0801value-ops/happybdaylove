@@ -22,6 +22,17 @@ jobs:
         shell: bash
         run: |
           unzip -q nirvana-final-fotos-actualizadas.zip -d site
+          cat >> site/__local/intro/mobile.css <<'MOBILE_FIX'
+          
+          @media(max-width:1024px),(pointer:coarse){
+           .eveworld-root:has(.nirvana-mobile-hero){background:#fff!important}
+           .eveworld-root:has(.nirvana-mobile-hero)>div[aria-hidden="true"]{display:none!important}
+           .nirvana-mobile-hero{display:block;position:relative;margin:16px 52px 4px;aspect-ratio:16/10;background:#f7f2eb;border-radius:10px;overflow:hidden;z-index:2}
+           .home-reading-column{padding-top:0!important;background:#fff!important}
+           .home-reading-inner{background:#fff!important}
+           .home-reading-inner>div[aria-hidden="true"]{display:none!important}
+          }
+          MOBILE_FIX
           node --input-type=module - site /happybdaylove <<'NIRVANA_PAGES'
           import { promises as fs } from 'node:fs'
           import path from 'node:path'
