@@ -20,6 +20,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Unpack the website
         run: unzip -q nirvana-final-fotos-actualizadas.zip -d site
+      - name: Adapt paths for GitHub Pages
+        run: |
+          find site -type f \( -name '*.html' -o -name '*.js' -o -name '*.mjs' -o -name '*.css' \) -print0 | xargs -0 sed -i 's#"/#"/happybdaylove/#g'
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
